@@ -18,3 +18,6 @@
 #   On replace les éléments non répétés en partant de la gauche de la zone à
 #   échanger et on repart à droite quand on arrive à la fin de gauche (comme
 #   dans un vieux jeu)
+
+# すき な こと だけ おしえて たい
+# Un lien très intéressant : http://www.theprojectspot.com/tutorial-post/applying-a-genetic-algorithm-to-the-travelling-salesman-problem/5 
