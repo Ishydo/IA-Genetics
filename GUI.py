@@ -26,6 +26,14 @@ def draw(positions):
 		pygame.display.flip()
 
 cities = []
+# Ouvrir le fichier des villes et récupérer ses dernières.
+
+with open('Ressources/data/pb020.txt', 'r') as out:
+	for line in out:
+		values = line.rstrip('\n').split(" ")
+		city = (int(values[1]), int(values[2]))
+		cities.append(city)
+
 draw(cities)
 
 collecting = True
