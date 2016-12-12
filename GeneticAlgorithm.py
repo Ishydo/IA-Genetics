@@ -12,3 +12,9 @@
 #   Appliquer un opérateur de mutation aux solutions ainsi obtenues
 #   Les solutions éventuellement mutées constituent la population X(n+1)
 # end
+
+
+# Recombinaison OX
+#   On replace les éléments non répétés en partant de la gauche de la zone à
+#   échanger et on repart à droite quand on arrive à la fin de gauche (comme
+#   dans un vieux jeu)
