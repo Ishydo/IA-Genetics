@@ -7,7 +7,7 @@
 #   Soit X(n) la population courante
 #   Évaluer le degré d'adaptation de chaque individu
 #   Sélectionner dans X(n) un ensemble de paires de solutions high quality
-#   Appliquer à chacune des paires de soluions sélectionnées un opérateur de croisement
+#   Appliquer à chacune des paires de soluions sélectionnées un opérateur de crossover
 #   Remplacer une partie de X(n), formée des solutions basse qualité par des enfants de haute qualité
 #   Appliquer un opérateur de mutation aux solutions ainsi obtenues
 #   Les solutions éventuellement mutées constituent la population X(n+1)
@@ -23,14 +23,21 @@
 # Un lien très intéressant : http://www.theprojectspot.com/tutorial-post/applying-a-genetic-algorithm-to-the-travelling-salesman-problem/5
 
 
-# Pour le random de la mutation
-import random
+import random   # Pour le random de la mutation
+import numpy    # Pour remplir tableau vide
+import copy     # Deepcopy des tableau pour éviter modification directe
+import argparse # Récupération des arguments
+from math import sqrt # Racine pour la distance à vol d'oiseau
 
-# Pour la gestion des tableaux
-import numpy
+# Reconnaissance des arguments à l'appel du fichier
+p = argparse.ArgumentParser()
+p.add_argument('--nogui')
+p.add_argument('--maxtime')
+p.add_argument('filename')
+ARGS = vars(p.parse_args())
 
-import copy
 
+# Classe ville pour faciliter l'algorithme
 class City:
 
     def __init__(self, name, x, y):
@@ -44,8 +51,8 @@ class City:
     def __repr__(self):
         return self.name
 
-# Mutation et croisements
 
+# Mutation et crossovers
 MUTATION_RATE = 0.015
 
 problem = [
@@ -58,13 +65,29 @@ problem = [
     City("Genève", x=300, y=4)
 ]
 
+
+# Calcul de la distance totale du circuit
+def get_loop_distance(problem):
+    distance = 0
+    cityA = None
+    for index, city in enumerate(problem):
+        if cityA is None:
+            cityA = city
+        else:
+            distance += sqrt(abs(cityA.x - city.x) ** 2 + abs(cityA.y - city.y) ** 2)
+            cityA = city
+
+    # Distance entre dernier et premier à la fin pour fermer la boucle
+    distance += sqrt(abs(cityA.x - problem[0].x) ** 2 + abs(cityA.y - problem[0].y) ** 2)
+    return distance
+
+
 # Mutation aléatoire d'un ensemble de villes
 def mutation(problem):
 
     new = copy.deepcopy(problem)
 
     for index, city in enumerate(new):
-
         r = random.randint(0, len(new) - 1)
 
         city1 = new[index]
@@ -75,15 +98,17 @@ def mutation(problem):
 
     return new
 
-def croisement(individu1, individu2):
-
-    # Points de croisement
+# Croisement de deux individus en deux points
+def crossover(individu1, individu2):
+    # Points de crossover
     startCrossPoint = random.randint(0, len(individu1) - 1)
     endCrossPoint = random.randint(0, len(individu1) - 1)
+    #print("Start:" + str(startCrossPoint))
+    #print("End:" + str(endCrossPoint))
 
     # Futur croisé
     generatedChild = numpy.array([None] * len(individu1))
-    print(generatedChild)
+    #print(generatedChild)
 
     for index, city in enumerate(individu1):
         if startCrossPoint < endCrossPoint and index > startCrossPoint and index < endCrossPoint:
@@ -92,33 +117,72 @@ def croisement(individu1, individu2):
             if not index < startCrossPoint and index > endCrossPoint:
                 generatedChild[index] = city
 
+    #print("Le generatedChild avant remplissage des trous :")
+    #print(generatedChild)
+
     for index2, city2 in enumerate(individu2):
         # A vérifier
         if city2 not in generatedChild:
-
             for index3, city3 in enumerate(individu2):
-                if generatedChild[index3] is None:
+                if city3 not in generatedChild:
+                    #print("On rempli trou avec " + str(city3))
                     generatedChild[index3] = city3
                     break
 
     return generatedChild
 
 
-    print(r1)
-    print(r2)
+# Fonction appelée pour la résolution de l'algorithme génétique
+def ga_solve(file=None, gui=True, maxtime=0):
+    print(file)
+    print(gui)
+    print(maxtime)
+
+    best = problem
+    dist = get_loop_distance(best)
+
+    # Recherche du meilleur choix en fonction de la distance sur ue boucle de 0 à 10
+    for i in range(0, 9):
+        print("Iteration " + str(i))
+
+        print("Best actuel : " + str(best))
+
+        problem2 = mutation(problem=best)
+        print("Version mutée : " + str(problem2))
+
+        # crossover
+        alien = crossover(best, problem2)
+
+        print("Le croisé alien est : " + str(alien))
+
+        distance_alien = get_loop_distance(alien)
+
+        print("(avec une distance de " + str(distance_alien) + ")")
+
+        if distance_alien < dist :
+            best = alien
+            dist = distance_alien
+
 
 
 if __name__ == "__main__":
-    print("test")
+
+    # Appel de l'algorithme génétique
+    ga_solve(file=ARGS["filename"], gui=ARGS["nogui"], maxtime=ARGS["maxtime"])
+
+    #print(sys.argv)
+
     #c = City("Dom", x=10, y=20)
     #print(problem)
     #mutation(problem)
     #print(problem)
-    problem2 = mutation(problem)
-    print("Problème et problem2 avant")
-    print(problem)
-    print(problem2)
-    alien = croisement(problem, problem2)
-    print("Problem et problem2 après")
-    print(problem)
-    print(alien)
+    #problem2 = mutation(problem)
+    #print("Problème et problem2 avant")
+    #print(problem)
+    #print(problem2)
+    #alien = crossover(problem, problem2)
+    #print("Problem et problem2 après")
+    #print(problem)
+    #print(alien)
+    #print(get_loop_distance(problem))
+    #print(problem)
