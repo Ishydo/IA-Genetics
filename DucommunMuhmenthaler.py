@@ -193,7 +193,7 @@ def ga_solve(file=None, gui=True, maxtime=0):
     while True:
     	event = pygame.event.wait()
     	if event.type == KEYDOWN: break
-        
+
     screen.fill(0)
     #pygame.draw.lines(screen,city_color,True,problem)
     text = font.render("Un chemin, pas le meilleur!", True, font_color)
