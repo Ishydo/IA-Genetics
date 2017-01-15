@@ -1,10 +1,10 @@
 # coding: latin-1
 
-''' Module permettant de tester systématiquement une série de solveurs 
-pour le problème du voyageur de commerce.
+''' Module permettant de tester systï¿½matiquement une sï¿½rie de solveurs
+pour le problï¿½me du voyageur de commerce.
 
-Permet de lancer automatiquement une série de solveurs sur une série de problèmes
-et génère une grille de résultats au format CSV.
+Permet de lancer automatiquement une sï¿½rie de solveurs sur une sï¿½rie de problï¿½mes
+et gï¿½nï¿½re une grille de rï¿½sultats au format CSV.
 
 v0.2, Matthieu Amiguet, HE-Arc
 v0.3, hatem Ghorbel, HE-Arc
@@ -12,20 +12,20 @@ v0.3, hatem Ghorbel, HE-Arc
 
 # PARAMETRES
 # =========
-# modifier cette partie pour l'adapter à vos besoins
+# modifier cette partie pour l'adapter ï¿½ vos besoins
 
-# Le nom des modules à tester
-# Ces modules doivent être dans le PYTHONPATH; p.ex. dans le répertoire courant
+# Le nom des modules ï¿½ tester
+# Ces modules doivent ï¿½tre dans le PYTHONPATH; p.ex. dans le rï¿½pertoire courant
 
 modules = (
-	"MAA09",
-	# Éventuellement d'autres modules pour comparer plusieurs versions...
+	"Propre",
+	# ï¿½ventuellement d'autres modules pour comparer plusieurs versions...
 )
 
-# Liste des tests à effectuer 
-# sous forme de couples (<datafile>, <maxtime>) où
-# <datafile> est le fichier contenant les données du problème et
-# <maxtime> le temps (en secondes) imparti pour la résolution
+# Liste des tests ï¿½ effectuer
+# sous forme de couples (<datafile>, <maxtime>) oï¿½
+# <datafile> est le fichier contenant les donnï¿½es du problï¿½me et
+# <maxtime> le temps (en secondes) imparti pour la rï¿½solution
 tests = (
     ('data/pb005.txt',1),
     #~ ('data/pb010.txt',5),
@@ -36,16 +36,16 @@ tests = (
     #~ ('data/pb100.txt',90),
 )
 
-# On tolère un dépassement de 5% du temps imparti:
+# On tolï¿½re un dï¿½passement de 5% du temps imparti:
 tolerance = 0.05
 
-# Fichier dans lequel écrire les résultats
+# Fichier dans lequel ï¿½crire les rï¿½sultats
 import sys
 outfile = sys.stdout
 # ou :
 #outfile = open('results.csv', 'w')
 
-# affichage à la console d'informations d'avancement?
+# affichage ï¿½ la console d'informations d'avancement?
 verbose = False
 
 # est-ce qu'on veut un affichage graphique?
@@ -53,7 +53,7 @@ gui = False
 
 # PROGRAMME
 # =========
-# Cette partie n'a théoriquement pas à être modifiée
+# Cette partie n'a thï¿½oriquement pas ï¿½ ï¿½tre modifiï¿½e
 
 import os
 from time import time
@@ -64,11 +64,11 @@ def dist(x1,y1,x2,y2):
 
 def validate(filename, length, path, duration, maxtime):
     '''Validation de la solution
-    
-    retourne une chaîne vide si tout est OK ou un message d'erreur sinon
+
+    retourne une chaï¿½ne vide si tout est OK ou un message d'erreur sinon
     '''
     error = ""
-    
+
     if duration>maxtime * (1+tolerance):
         error += "Timeout (%.2f) " % (duration-maxtime)
     try:
@@ -76,13 +76,13 @@ def validate(filename, length, path, duration, maxtime):
     except:
         return "(Validation failed...)"
     tovisit = cities.keys()
-    
+
     try:
         totaldist = 0
         for (ci, cj) in zip(path, path[1:] +path[0:1]):
             totaldist += dist(cities[ci],cities[cj])
             tovisit.remove(ci)
-            
+
         if int(totaldist) != int(length):
             error += "Wrong dist! (%d instead of %d)" % (length, totaldist)
     except KeyError:
@@ -91,18 +91,18 @@ def validate(filename, length, path, duration, maxtime):
         error += "City %s appears twice in %r! " % (ci, path)
     except Exception as e:
         error += "Error during validation: %r" % e
-    
+
     if tovisit:
         error += "Not all cities visited! %r" % tovisit
-    
+
     return error
 
 
 
 if __name__ == '__main__':
-    # Récupération des différentes implémentations
-    # On met les différentes fonctions ga_solve() dans un dictionnaire indexé par le nom du module correpsondant
-    # On en profite pour écrire la ligne d'en-tête du fichier de sortie
+    # Rï¿½cupï¿½ration des diffï¿½rentes implï¿½mentations
+    # On met les diffï¿½rentes fonctions ga_solve() dans un dictionnaire indexï¿½ par le nom du module correpsondant
+    # On en profite pour ï¿½crire la ligne d'en-tï¿½te du fichier de sortie
 
     solvers = {}
 
@@ -116,18 +116,18 @@ if __name__ == '__main__':
     outfile.write('\n')
 
     # Cette partie effectue les tests proprement dits
-    # et rapporte les résultats dans outfile
+    # et rapporte les rï¿½sultats dans outfile
 
     for (filename, maxtime) in tests:
-        if verbose: 
+        if verbose:
             print ("--> %s, %d" % (filename, maxtime))
         # normalisation du nom de fichier (pour l'aspect multi-plateforme)
         filename = os.path.normcase(os.path.normpath(filename))
-        # Écriture de l'en-tête de ligne
+        # ï¿½criture de l'en-tï¿½te de ligne
         outfile.write("%s (%ds);" % (filename, maxtime))
-        # Appel des solveurs proprement dits, vérification et écriture des résultats
+        # Appel des solveurs proprement dits, vï¿½rification et ï¿½criture des rï¿½sultats
         for m in modules:
-            if verbose: 
+            if verbose:
                 print ("## %s" % m)
             try:
                 start = time()

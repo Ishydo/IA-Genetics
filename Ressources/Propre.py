@@ -28,12 +28,15 @@ import numpy    # Pour remplir tableau vide
 import copy     # Deepcopy des tableau pour éviter modification directe
 import argparse # Récupération des arguments
 
+# TODO: Define imports
 from math import sqrt # Racine pour la distance à vol d'oiseau
 from time import time
 import pygame
 from pygame.locals import KEYDOWN, QUIT, MOUSEBUTTONDOWN, K_RETURN, K_ESCAPE
 import sys
 
+
+# TODO: Ordonner les variables, les renommes si besoin
 screen_x = 500
 screen_y = 500
 
@@ -51,31 +54,33 @@ cities = None
 
 problem = []
 
-pygame.init()
-window = pygame.display.set_mode((screen_x, screen_y))
-pygame.display.set_caption('Exemple')
-font = pygame.font.Font(None,30)
+window = None
+font = None
+
+
 
 # Classe ville pour faciliter l'algorithme
+#TODO: City docstring
 class City:
-
     def __init__(self, name, x, y):
         self.name = name
         self.x = x
         self.y = y
 
     def __str__(self):
-        return self.name + " {x: " + str(self.x) + ", y: " + str(self.y) + "}"
+        return self.name
 
     def __repr__(self):
         return self.name
 
+# TODO: Chromosome docstring
 class Chromosome:
 
     def __init__(self, genes=None):
         self.genes = genes
         self.distance = self.calcul_distance()
 
+    # TODO: Docstring calcul de distance
     def calcul_distance(self):
         distance = 0
         indexA = None
@@ -121,15 +126,7 @@ def load_file(filename):
             values = line.rstrip('\n').split(" ")
             problem.append(City(values[0], x=int(values[1]), y=int(values[2])))
 
-
-# Reconnaissance des arguments à l'appel du fichier
-p = argparse.ArgumentParser()
-p.add_argument('--nogui')
-p.add_argument('--maxtime')
-p.add_argument('filename')
-ARGS = vars(p.parse_args())
-
-
+# TODO: Population
 def populate(nb):
     """Create a population"""
     population = []
@@ -156,6 +153,7 @@ def populate(nb):
 
     return population
 
+# TODO: Doc population
 def selection(population):
     population = sorted(population, key=lambda chromosome: chromosome.distance)
     population = population[:(int)(len(population) * selection_rate)]
@@ -163,7 +161,7 @@ def selection(population):
     return population
 
 
-# Mutation aléatoire d'un ensemble de villes
+# TODO: Docstring mutation, change
 def mutation(population):
     for i in range(0, int(len(population) * mutation_rate)):
         chromosome = random.choice(population)
@@ -184,7 +182,7 @@ def mutation(population):
 
     return population
 
-
+# TODO: Doc crossover
 def crossover(population):
     size_pop_genes = len(population[0].genes)
     start_xo_index = int((2*size_pop_genes - size_pop_genes) / 4)
@@ -223,7 +221,10 @@ def crossover(population):
     return population
 
 # Fonction appelée pour la résolution de l'algorithme génétique
-def ga_solve(file, gui, maxtime):
+def ga_solve(file=None, gui=True, maxtime=0):
+    if file is not None:
+        time_init = time()
+
     if gui is None:
         gui = True
 
@@ -231,11 +232,19 @@ def ga_solve(file, gui, maxtime):
         maxtime = 5
 
     global cities
+    global problem
     global mutation_rate
     global window
 
+    if gui:
+        pygame.init()
+        window = pygame.display.set_mode((screen_x, screen_y))
+        pygame.display.set_caption('Exemple')
+        font = pygame.font.Font(None,30)
 
     if file is not None:
+        cities = None
+        problem = []
         load_file(file)
 
     else:
@@ -252,11 +261,14 @@ def ga_solve(file, gui, maxtime):
 
     # TESTS
     cities = tuple(problem)
-
-    time_left = maxtime
+    time_left = maxtime - (0.02 * maxtime)
     population = populate(pop_size)
     augmentation_up = False
+    mutation_rate = 0.4
     tot = 0
+    if file is not None:
+        time_fin_init = time()
+        time_left -= time_fin_init - time_init
 
     while time_left > 0:
         time1 = time()
@@ -275,16 +287,23 @@ def ga_solve(file, gui, maxtime):
 
         time_left -= elapsedtime
 
-    print("Résultat")
-    print(str(tot))
     population = sorted(population, key=lambda chromosome: chromosome.distance)
-    # for chromo in population:
-    #     print(chromo)
-    print(population[0])
-
+    ordered_cities = []
+    best_chromosome = population[0]
+    for index in best_chromosome.genes:
+        ordered_cities.append(str(cities[index]))
+    #print(ordered_cities)
+    return best_chromosome.distance, ordered_cities
 
 if __name__ == "__main__":
+    filename = None
+    gui = None
+    maxtime = None
+
+    for arg in sys.argv[1:]:
+        print(arg)
+
     # Appel de l'algorithme génétique
-    ga_solve(file=ARGS["filename"], gui=ARGS["nogui"], maxtime=ARGS["maxtime"])
+    #ga_solve(file=ARGS["filename"], gui=ARGS["nogui"], maxtime=ARGS["maxtime"])
     #print(ARGS["nogui"])
     #ga_solve(file=ARGS["filename"])
