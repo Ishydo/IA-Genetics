@@ -1,28 +1,3 @@
-# Voir document GA.pdf
-
-# Soit une population initiale
-
-# Tant que la règle n'est pas satisfaite
-# do
-#   Soit X(n) la population courante
-#   Évaluer le degré d'adaptation de chaque individu
-#   Sélectionner dans X(n) un ensemble de paires de solutions high quality
-#   Appliquer à chacune des paires de soluions sélectionnées un opérateur de crossover
-#   Remplacer une partie de X(n), formée des solutions basse qualité par des enfants de haute qualité
-#   Appliquer un opérateur de mutation aux solutions ainsi obtenues
-#   Les solutions éventuellement mutées constituent la population X(n+1)
-# end
-
-
-# Recombinaison OX
-#   On replace les éléments non répétés en partant de la gauche de la zone à
-#   échanger et on repart à droite quand on arrive à la fin de gauche (comme
-#   dans un vieux jeu)
-
-# すき な こと だけ おしえて たい
-# Un lien très intéressant : http://www.theprojectspot.com/tutorial-post/applying-a-genetic-algorithm-to-the-travelling-salesman-problem/5
-
-
 import random   # Pour le random de la mutation
 import numpy    # Pour remplir tableau vide
 import copy     # Deepcopy des tableau pour éviter modification directe
@@ -40,8 +15,8 @@ import sys
 screen_x = 500
 screen_y = 500
 
-city_color = [255,255,255] # blue
-city_radius = 3
+Gene_color = [255,255,255] # blue
+Gene_radius = 3
 POINTSIZE = 3
 
 font_color = [255,255,255] # white
@@ -49,7 +24,11 @@ font_color = [255,255,255] # white
 pop_size = 20
 mutation_rate = 0.4
 selection_rate = 0.7
-maxtime = 60
+
+maxtime = 0
+gui = True
+filename = None
+
 cities = None
 
 problem = []
@@ -60,8 +39,8 @@ font = None
 
 
 # Classe ville pour faciliter l'algorithme
-#TODO: City docstring
-class City:
+#TODO: Gene docstring
+class Gene:
     def __init__(self, name, x, y):
         self.name = name
         self.x = x
@@ -101,15 +80,12 @@ class Chromosome:
     def __repr__(self):
         return str(self.distance) + "\n"
 
-def clear_window():
+
+def draw(population):
     window.fill(0)
 
     for point in cities:
-        pygame.draw.rect(window, city_color, [point.x, point.y, POINTSIZE, POINTSIZE])
-
-
-def draw(population):
-    clear_window()
+        pygame.draw.rect(window, Gene_color, [point.x, point.y, POINTSIZE, POINTSIZE])
 
     list_points = []
     best_genes_list = population[0].genes
@@ -117,14 +93,14 @@ def draw(population):
         list_points.append((cities[gene].x, cities[gene].y))
 
     list_points.append((cities[best_genes_list[0]].x, cities[best_genes_list[0]].y))
-    pygame.draw.lines(window, city_color, False, list_points, 1)
+    pygame.draw.lines(window, Gene_color, False, list_points, 1)
     pygame.display.update()
 
 def load_file(filename):
     with open(filename, 'r') as out:
         for line in out:
             values = line.rstrip('\n').split(" ")
-            problem.append(City(values[0], x=int(values[1]), y=int(values[2])))
+            problem.append(Gene(values[0], x=int(values[1]), y=int(values[2])))
 
 # TODO: Population
 def populate(nb):
@@ -166,17 +142,17 @@ def mutation(population):
     for i in range(0, int(len(population) * mutation_rate)):
         chromosome = random.choice(population)
         new_genes_list = list(chromosome.genes)
-        for i in range(0,2):
-            start_index = random.randrange(0, len(new_genes_list))
-            end_index = random.randrange(0, len(new_genes_list))
 
-            if end_index < start_index:
-                start_index, end_index = end_index, start_index
+        start_index = random.randrange(0, len(new_genes_list))
+        end_index = random.randrange(0, len(new_genes_list))
 
-            part_to_reverse = new_genes_list[start_index:end_index]
-            part_to_reverse.reverse()
+        if end_index < start_index:
+            start_index, end_index = end_index, start_index
 
-            new_genes_list[start_index:end_index] = part_to_reverse
+        part_to_reverse = new_genes_list[start_index:end_index]
+        part_to_reverse.reverse()
+
+        new_genes_list[start_index:end_index] = part_to_reverse
 
         population.append(Chromosome(new_genes_list))
 
@@ -222,6 +198,7 @@ def crossover(population):
 
 # Fonction appelée pour la résolution de l'algorithme génétique
 def ga_solve(file=None, gui=True, maxtime=0):
+
     if file is not None:
         time_init = time()
 
@@ -242,6 +219,7 @@ def ga_solve(file=None, gui=True, maxtime=0):
         pygame.display.set_caption('Exemple')
         font = pygame.font.Font(None,30)
 
+
     if file is not None:
         cities = None
         problem = []
@@ -256,8 +234,9 @@ def ga_solve(file=None, gui=True, maxtime=0):
                 elif event.type == KEYDOWN and event.key == K_RETURN:
                     collecting = False
                 elif event.type == MOUSEBUTTONDOWN:
-                    problem.append(City("City", x=pygame.mouse.get_pos()[0], y=pygame.mouse.get_pos()[1]))
-                    #draw(problem)
+                    problem.append(Gene("Gene"+str(len(problem)), x=pygame.mouse.get_pos()[0], y=pygame.mouse.get_pos()[1]))
+                    pygame.draw.rect(window, Gene_color, [pygame.mouse.get_pos()[0], pygame.mouse.get_pos()[1], POINTSIZE, POINTSIZE])
+                    pygame.display.flip()
 
     # TESTS
     cities = tuple(problem)
@@ -265,7 +244,7 @@ def ga_solve(file=None, gui=True, maxtime=0):
     population = populate(pop_size)
     augmentation_up = False
     mutation_rate = 0.4
-    tot = 0
+
     if file is not None:
         time_fin_init = time()
         time_left -= time_fin_init - time_init
@@ -275,35 +254,40 @@ def ga_solve(file=None, gui=True, maxtime=0):
         population = selection(population)
         population = crossover(population)
         population = mutation(population)
-        tot += 1
         if gui:
             draw(population)
-        time2 = time()
-        elapsedtime = time2 - time1
-
-        if time_left < maxtime/2 and not augmentation_up:
-            mutation_rate += 0.2
-            augmentation_up = True
-
-        time_left -= elapsedtime
+        time_left -= (time() - time1)
 
     population = sorted(population, key=lambda chromosome: chromosome.distance)
     ordered_cities = []
     best_chromosome = population[0]
+
     for index in best_chromosome.genes:
         ordered_cities.append(str(cities[index]))
     #print(ordered_cities)
     return best_chromosome.distance, ordered_cities
 
 if __name__ == "__main__":
-    filename = None
-    gui = None
-    maxtime = None
+    from sys import argv
 
-    for arg in sys.argv[1:]:
-        print(arg)
+    # Reconnaissance des arguments à l'appel du fichier
+    p = argparse.ArgumentParser()
+    p.add_argument('--nogui')
+    p.add_argument('--maxtime')
+    p.add_argument('filename')
+    ARGS = vars(p.parse_args())
+
+    filename_arg = (ARGS['filename'], filename)[ARGS['filename'] is None]
+    nogui_arg = (False if ARGS['nogui'] == "False" else True, not gui)[ARGS['nogui'] is None]
+    maxtime_arg = (ARGS['maxtime'], maxtime)[ARGS['maxtime'] is None]
+
+    if filename_arg == "None":
+        filename_arg = None
 
     # Appel de l'algorithme génétique
-    #ga_solve(file=ARGS["filename"], gui=ARGS["nogui"], maxtime=ARGS["maxtime"])
-    #print(ARGS["nogui"])
-    #ga_solve(file=ARGS["filename"])
+    print(ga_solve(filename_arg, not nogui_arg, int(maxtime_arg)))
+    collecting = True
+    while collecting:
+        for event in pygame.event.get():
+            if event.type == QUIT or (event.type == KEYDOWN and event.key == K_RETURN):
+                sys.exit(0)
