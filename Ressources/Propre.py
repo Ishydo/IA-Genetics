@@ -19,6 +19,7 @@ POPULATION_SIZE = 20    # Taille des populations
 MUTATION_RATE = 0.4     # Taux de mutation
 SELECTION_RATE = 0.7    # Taux de sélection
 TIME_TOLERANCE = 0.02   # Tolérance du temps
+STAGNATION_TOLERANCE = 1000 # Combien de nouveaux cycles sans autres meilleurs résultats
 
 maxtime = 0             # Temps d'exécution maximum
 filename = None         # Nom du fichier
@@ -98,7 +99,16 @@ class Chromosome:
     def __repr__(self):
         return str(self.distance) + "\n"
 
+###############################################
+################# UTILITAIRES #################
+###############################################
+
 def draw(population):
+    ''' Permet de dessiner sur la fenêtre la liste des genes (villes) ainsi que le meilleur chemin
+
+        Argument :
+        population -- La population actuelle
+    '''
     window.fill(0)
 
     for point in cities:
@@ -114,6 +124,11 @@ def draw(population):
     pygame.display.update()
 
 def load_file(filename):
+    ''' Permet de charger les genes (villes) du fichier passé en arguments
+
+        Argument :
+        filename -- nom du fichier
+    '''
     with open(filename, 'r') as out:
         for line in out:
             values = line.rstrip('\n').split(" ")
@@ -206,8 +221,8 @@ def crossover(population):
 
     genes_size = len(population[0].genes)
 
-    startIndex = int((2*genes_size - genes_size) / 4)
-    endIndex = int((2*genes_size + genes_size) / 4)
+    startIndex = int(0.25 * genes_size)
+    endIndex = int(0.75 * genes_size)
 
     for i in range(0, POPULATION_SIZE - len(population)):
         # Choix de deux chromosomes au hasard
@@ -255,26 +270,27 @@ def ga_solve(file=None, GUI=True, maxtime=0):
     '''Fonction finale appelée pour la résolution du prblème.
     '''
 
-    # Valeurs par défaut
+    # Si on n'a pas de fichier, on devra noter les points. Donc pas compter le temps dans ce cas.
     if file is not None:
         time_init = time()
-
-    if GUI is None:
-        GUI = True
-
-    if maxtime is None:
-        maxtime = 5
 
     global cities
     global problem
     global MUTATION_RATE
+    global STAGNATION_TOLERANCE
     global window
+
+    nb_after_last_best = 0
+    best_distance = None
+    stagnation = False
+    if maxtime == 0:
+        stagnation = True
+
 
     if GUI:
         pygame.init()
         window = pygame.display.set_mode((screen_x, screen_y))
-        pygame.display.set_caption('Exemple')
-        font = pygame.font.Font(None,30)
+        pygame.display.set_caption('IA-PVC - Ducommun & Muhmenthaler')
 
     if file is not None:
         cities = None
@@ -285,7 +301,7 @@ def ga_solve(file=None, GUI=True, maxtime=0):
         collecting = True
         while collecting:
             for event in pygame.event.get():
-                if event.type == QUIT:
+                if event.type == pygame.QUIT:
                     sys.exit(0)
                 elif event.type == KEYDOWN and event.key == K_RETURN:
                     collecting = False
@@ -298,15 +314,13 @@ def ga_solve(file=None, GUI=True, maxtime=0):
     cities = tuple(problem)
     time_left = maxtime - (TIME_TOLERANCE * maxtime)
     population = populate(POPULATION_SIZE)
-    augmentation_up = False
-    MUTATION_RATE = 0.4
 
     if file is not None:
         time_fin_init = time()
         time_left -= time_fin_init - time_init
 
     # Tant qu'il reste du temps
-    while time_left > 0:
+    while time_left > 0 or stagnation:
         # On get le temps actuel
         time1 = time()
 
@@ -321,6 +335,16 @@ def ga_solve(file=None, GUI=True, maxtime=0):
 
         # Mise à jour du temps restant
         time_left -= (time() - time1)
+
+        if stagnation:
+            if best_distance is None or best_distance > population[0].distance:
+                best_distance = population[0].distance
+                nb_after_last_best = 0
+            else:
+                nb_after_last_best += 1
+                if nb_after_last_best > STAGNATION_TOLERANCE:
+                    break
+
 
     # Tri du tableau et génération du résultat final à renvoyer
     population = sorted(population, key=lambda chromosome: chromosome.distance)
@@ -351,8 +375,12 @@ if __name__ == "__main__":
     if filename_arg == "None":
         filename_arg = None
 
+    print(ga_solve(filename_arg, not nogui_arg, int(maxtime_arg)))
+
     # Attente avant de quitter
-    while 1:
-        for event in pygame.event.get():
-            if event.type == QUIT or (event.type == KEYDOWN and event.key == K_RETURN):
-                sys.exit(0)
+    if not nogui_arg:
+        print("Appuyer sur Entrée dans la fenêtre d'affichage pour quitter")
+        while 1:
+            for event in pygame.event.get():
+                if event.type == pygame.QUIT or (event.type == KEYDOWN and event.key == K_RETURN):
+                    sys.exit(0)
