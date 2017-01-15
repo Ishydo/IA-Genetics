@@ -2,45 +2,56 @@ import random   # Pour le random de la mutation
 import numpy    # Pour remplir tableau vide
 import copy     # Deepcopy des tableau pour éviter modification directe
 import argparse # Récupération des arguments
+import sys      # sys.exit() pour quitter
 
-# TODO: Define imports
 from math import sqrt # Racine pour la distance à vol d'oiseau
-from time import time
-import pygame
-from pygame.locals import KEYDOWN, QUIT, MOUSEBUTTONDOWN, K_RETURN, K_ESCAPE
-import sys
+from time import time # Pour le calcul du temps d'exécution
+
+import pygame         # Pour l'affichage graphique
+from pygame.locals import KEYDOWN, QUIT, MOUSEBUTTONDOWN, K_RETURN, K_ESCAPE # Les touches
+
+###############################################
+############## CONSTANTES #####################
+###############################################
+
+# Constantes en lien avec l'algorithme génétique
+POPULATION_SIZE = 20    # Taille des populations
+MUTATION_RATE = 0.4     # Taux de mutation
+SELECTION_RATE = 0.7    # Taux de sélection
+TIME_TOLERANCE = 0.02   # Tolérance du temps
+
+maxtime = 0             # Temps d'exécution maximum
+filename = None         # Nom du fichier
+cities = None           # Tableau des villes
+problem = []            # Problème de base
+
+# Constantes en lien avec l'affichage graphique
+GUI = True                  # Affichage graphique ou non
+window = None               # Fenêtre
+font = None                 # Police
+screen_x = 500              # Largeur d'écran
+screen_y = 500              # Hauteur d'écran
+
+Gene_color = [255,255,255]  # Couleur des points
+font_color = [255,255,255]  # Couleur de police
+Gene_radius = 3             # Rayon des points
+POINTSIZE = 3               # Taille des points
 
 
-# TODO: Ordonner les variables, les renommes si besoin
-screen_x = 500
-screen_y = 500
+###############################################
+################# CLASSES #####################
+###############################################
 
-Gene_color = [255,255,255] # blue
-Gene_radius = 3
-POINTSIZE = 3
-
-font_color = [255,255,255] # white
-
-pop_size = 20
-mutation_rate = 0.4
-selection_rate = 0.7
-
-maxtime = 0
-gui = True
-filename = None
-
-cities = None
-
-problem = []
-
-window = None
-font = None
-
-
-
-# Classe ville pour faciliter l'algorithme
-#TODO: Gene docstring
 class Gene:
+    '''Classe représentant un gène (dans notre cas précis, une ville)
+
+    Propriétés :
+    name -- Nom de la ville
+    x -- La position en x de la ville
+    y -- La position en y de la ville
+
+    __str__ et __repr__ retournent le name de la ville pour une représentation humaine compréhensible.
+    '''
     def __init__(self, name, x, y):
         self.name = name
         self.x = x
@@ -52,15 +63,22 @@ class Gene:
     def __repr__(self):
         return self.name
 
-# TODO: Chromosome docstring
 class Chromosome:
+    '''Classe représentant un chromosome (ensemble de genes)
 
+    Propriétés :
+    genes -- Tableau contenant les gènes (villes) de ce chromosome.
+    distance -- La distance à parcourir pour visiter les gènes de ce chromosome dans l'ordre (coût)
+    '''
     def __init__(self, genes=None):
         self.genes = genes
         self.distance = self.calcul_distance()
 
-    # TODO: Docstring calcul de distance
     def calcul_distance(self):
+        '''Calcule la distance à parcourir pour faire le circuit de gène d'un chromosome.
+        La méthode consiste à parcourir le tableau de gènes et de calculer la distance entre deux en itérant.
+        Il ne faut pas oublier de calculer la distance entre la dernière ville et la première !
+        '''
         distance = 0
         indexA = None
         firstIndex = None
@@ -73,13 +91,12 @@ class Chromosome:
                 distance += sqrt(abs(cities[index].x - cities[indexA].x) ** 2 + abs(cities[index].y - cities[indexA].y) ** 2)
                 indexA = index
 
-        # Distance entre dernier et premier à la fin pour fermer la boucle
+        # Distance entre le premier et le dernier élément à la fin pour clore la boucle
         distance += sqrt(abs(cities[indexA].x - cities[firstIndex].x) ** 2 + abs(cities[indexA].y - cities[firstIndex].y) ** 2)
         return distance
 
     def __repr__(self):
         return str(self.distance) + "\n"
-
 
 def draw(population):
     window.fill(0)
@@ -102,123 +119,162 @@ def load_file(filename):
             values = line.rstrip('\n').split(" ")
             problem.append(Gene(values[0], x=int(values[1]), y=int(values[2])))
 
-# TODO: Population
-def populate(nb):
-    """Create a population"""
-    population = []
 
-    available_indexes = []
+###############################################
+######## OPÉRATIONS D'ALGO GENETIQUE ##########
+###############################################
+def populate(population_size):
+    '''Création d'une population composée de chromosomes (qui eux-mêmes sont composés de gènes).
+
+        Argument :
+        population_size -- Taille de la population
+    '''
+
+    population = []         # Initialisation de la future population
+    available_indices = []  # Les index libres
 
     # Pour chaque échantillon de la population à créer
-    for _ in range(0,nb):
-        indexes_list = []
+    for i in range(0, population_size):
 
-        available_indexes = list(range(len(problem)))
+        taken_indices = []  # Tableau des indices occupés
+        available_indices = list(range(len(problem))) # Au départ, les indices sont tous libres
 
-        # On utilise ici une liste d'index afin de minimiser les appels au random
-        # Tant qu'il reste encore des index (attention, ils ne sont pas forcément consécutifs)
-        while (len(available_indexes) > 0):
-            # On tire au hasard un index entre 0 et la longueur de la chaine
-            index = random.randrange(0, len(available_indexes))
-            # On ajoute la valeur contenue à l'index à la séquence de villes
-            indexes_list.append(available_indexes[index])
-            # On retire l'index de la ville
-            del available_indexes[index]
+        # Tant qu'il reste des indices libres
+        while (len(available_indices) > 0):
+            new_index = random.randrange(0, len(available_indices)) # On prend un indice au hasard sur la longueur du tableau d'indices libres
+            taken_indices.append(available_indices[new_index]) # On ajoute la valeur contenue à l'indice généré dans le tableau d'indices occupés
+            del available_indices[new_index] # On retire l'indice au tableau des indices libres
 
-        population.append(Chromosome(indexes_list))
+        population.append(Chromosome(taken_indices)) # On ajoute le chromosome généré contenant notre suite de gènes à la population
 
     return population
 
-# TODO: Doc population
+
 def selection(population):
+    '''On trie la population par rapport à son coût.
+        On ne garde ensuite qu'un certain pourcentage de la population en fonction du taux de sélection avant de retourner ce qu'il reste.
+        On ne garde donc que les meilleurs chromosomes.
+        Argument :
+        population -- La population actuelle
+    '''
+    # Tri de la population par rapport à la distance à parcourir
     population = sorted(population, key=lambda chromosome: chromosome.distance)
-    population = population[:(int)(len(population) * selection_rate)]
+
+    # On ne garde de la population qu'un certain pourcentage selon le taux de sélection
+    population = population[:(int)(len(population) * SELECTION_RATE)]
 
     return population
 
 
-# TODO: Docstring mutation, change
 def mutation(population):
-    for i in range(0, int(len(population) * mutation_rate)):
-        chromosome = random.choice(population)
-        new_genes_list = list(chromosome.genes)
+    '''La mutation consiste à effectuer une action sur les chromosomes (ordre des gènes) pour les modifier.
+        Ici, on sélectionne aléatoirement une portion de la population par rapport au taux de mutation et on l'inverse.
+        Argument :
+        population -- La population courante.
+    '''
+    # Pour chaque élément d'un certain pourcentage de la population
+    for i in range(0, int(len(population) * MUTATION_RATE)):
 
-        start_index = random.randrange(0, len(new_genes_list))
-        end_index = random.randrange(0, len(new_genes_list))
+        # On va effectuer la mutation sur les genes d'un chromosome pris au hasard
+        genes = list(random.choice(population).genes)
 
-        if end_index < start_index:
-            start_index, end_index = end_index, start_index
+        # Un index de début et de fin pour définir la plage à inverser
+        startIndex = random.randrange(0, len(genes))
+        endIndex = random.randrange(0, len(genes))
 
-        part_to_reverse = new_genes_list[start_index:end_index]
-        part_to_reverse.reverse()
+        # Inversion des valeurs si l'indice de fin est plus petit que celui de départ
+        if endIndex < startIndex:
+            endIndex, startIndex = startIndex, endIndex
 
-        new_genes_list[start_index:end_index] = part_to_reverse
+        # La plage de genes entre les indices à inverser
+        mutated_range = genes[startIndex:endIndex]
+        mutated_range.reverse()
 
-        population.append(Chromosome(new_genes_list))
+        # On remplace la plage de base par la plage inversée
+        genes[startIndex:endIndex] = mutated_range
+
+        # On insère le nouveau chromosome dans la population
+        population.append(Chromosome(genes))
 
     return population
 
-# TODO: Doc crossover
+
 def crossover(population):
-    size_pop_genes = len(population[0].genes)
-    start_xo_index = int((2*size_pop_genes - size_pop_genes) / 4)
-    end_xo_index = int((2*size_pop_genes + size_pop_genes) / 4)
+    '''Le croisement se fait selon la méthode du croisement en deux points.
 
-    for chromosome_index in range(0, pop_size - len(population)):
-        chromosome_x = random.choice(population)
-        chromosome_y = random.choice(population)
+    '''
 
-        list_to_replace = []
+    genes_size = len(population[0].genes)
 
-        for i in chromosome_y.genes[start_xo_index:end_xo_index+1]:
-            list_to_replace.append(i)
+    startIndex = int((2*genes_size - genes_size) / 4)
+    endIndex = int((2*genes_size + genes_size) / 4)
 
-        new_genes_list = []
-        for value in chromosome_x.genes:
-            if value not in list_to_replace:
-                new_genes_list.append(value)
+    for i in range(0, POPULATION_SIZE - len(population)):
+        # Choix de deux chromosomes au hasard
+        chrom_a = random.choice(population)
+        chrom_b = random.choice(population)
+
+        replaced_genes = [] # Les genes à remplacer
+        new_genes = []      # Les nouveaux genes
+
+        # Les genes à remplacer sont pris dans le chromosome B
+        for gene in chrom_b.genes[startIndex:endIndex+1]:
+            replaced_genes.append(gene)
+
+        # On parcourt les genes du chromosome A
+        for gene in chrom_a.genes:
+            # Tous les genes qui ne sont pas à remplacer sont ajoutés dans le nouveau gène, les autres deviennent None
+            if gene not in replaced_genes:
+                new_genes.append(gene)
             else:
-                new_genes_list.append(None)
+                new_genes.append(None)
 
-        nb_none_right = 0
-        for i in new_genes_list[end_xo_index+1:]:
+        # On compte combien il y a d'éléments vides sur la plage de droite du gène généré
+        right_nones = 0
+        for i in new_genes[endIndex+1:]:
             if i is None:
-                nb_none_right += 1
+                right_nones += 1
 
-        new_genes_list = list(filter((None).__ne__, new_genes_list))
+        # On supprime ces Nones dans le gène généré
+        new_genes = list(filter((None).__ne__, new_genes))
 
-        for i in range(0,nb_none_right):
-            new_genes_list.append(new_genes_list.pop(0))
+        # On shift les éléments vers la droite
+        for i in range(0, right_nones):
+            new_genes.append(new_genes.pop(0))
 
-        new_genes_list[start_xo_index:start_xo_index] = chromosome_y.genes[start_xo_index:end_xo_index+1]
+        # On insère les valeurs du chromosome b dans la plage prévue du new_gene
+        new_genes[startIndex:startIndex] = chrom_b.genes[startIndex:endIndex+1]
 
-        population.append(Chromosome(new_genes_list))
+        # On ajoute le chromosome avec la nouvelle suite de genes à la population
+        population.append(Chromosome(new_genes))
 
     return population
 
-# Fonction appelée pour la résolution de l'algorithme génétique
-def ga_solve(file=None, gui=True, maxtime=0):
 
+def ga_solve(file=None, GUI=True, maxtime=0):
+    '''Fonction finale appelée pour la résolution du prblème.
+    '''
+
+    # Valeurs par défaut
     if file is not None:
         time_init = time()
 
-    if gui is None:
-        gui = True
+    if GUI is None:
+        GUI = True
 
     if maxtime is None:
         maxtime = 5
 
     global cities
     global problem
-    global mutation_rate
+    global MUTATION_RATE
     global window
 
-    if gui:
+    if GUI:
         pygame.init()
         window = pygame.display.set_mode((screen_x, screen_y))
         pygame.display.set_caption('Exemple')
         font = pygame.font.Font(None,30)
-
 
     if file is not None:
         cities = None
@@ -240,31 +296,41 @@ def ga_solve(file=None, gui=True, maxtime=0):
 
     # TESTS
     cities = tuple(problem)
-    time_left = maxtime - (0.02 * maxtime)
-    population = populate(pop_size)
+    time_left = maxtime - (TIME_TOLERANCE * maxtime)
+    population = populate(POPULATION_SIZE)
     augmentation_up = False
-    mutation_rate = 0.4
+    MUTATION_RATE = 0.4
 
     if file is not None:
         time_fin_init = time()
         time_left -= time_fin_init - time_init
 
+    # Tant qu'il reste du temps
     while time_left > 0:
+        # On get le temps actuel
         time1 = time()
+
+        # Les opérations de l'algorithme génétique
         population = selection(population)
         population = crossover(population)
         population = mutation(population)
-        if gui:
+
+        # Affichage graphique si besoin
+        if GUI:
             draw(population)
+
+        # Mise à jour du temps restant
         time_left -= (time() - time1)
 
+    # Tri du tableau et génération du résultat final à renvoyer
     population = sorted(population, key=lambda chromosome: chromosome.distance)
     ordered_cities = []
     best_chromosome = population[0]
 
     for index in best_chromosome.genes:
         ordered_cities.append(str(cities[index]))
-    #print(ordered_cities)
+
+    # Retourne les résultats finaux : coût et villes dans l'ordre
     return best_chromosome.distance, ordered_cities
 
 if __name__ == "__main__":
@@ -277,17 +343,16 @@ if __name__ == "__main__":
     p.add_argument('filename')
     ARGS = vars(p.parse_args())
 
+    # Définition des valeurs d'arguments selon situation
     filename_arg = (ARGS['filename'], filename)[ARGS['filename'] is None]
-    nogui_arg = (False if ARGS['nogui'] == "False" else True, not gui)[ARGS['nogui'] is None]
+    nogui_arg = (False if ARGS['nogui'] == "False" else True, not GUI)[ARGS['nogui'] is None]
     maxtime_arg = (ARGS['maxtime'], maxtime)[ARGS['maxtime'] is None]
 
     if filename_arg == "None":
         filename_arg = None
 
-    # Appel de l'algorithme génétique
-    print(ga_solve(filename_arg, not nogui_arg, int(maxtime_arg)))
-    collecting = True
-    while collecting:
+    # Attente avant de quitter
+    while 1:
         for event in pygame.event.get():
             if event.type == QUIT or (event.type == KEYDOWN and event.key == K_RETURN):
                 sys.exit(0)
